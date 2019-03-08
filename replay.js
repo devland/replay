@@ -5,7 +5,21 @@ const replay=function()
   if (element.id) return {type: 'id', value: element.id};
   else
   {
-   return 'todo';
+   let list=[], index;
+   let previousElement=element, previousSibling;
+   while(previousElement)
+   {
+    index=1;
+    previousSibling=previousElement.previousElementSibling;
+    while(previousSibling)
+    {
+     if (previousSibling.nodeName==element.nodeName) index++;
+     previousSibling=previousSibling.previousElementSibling;
+    }
+    list.push(`/${previousElement.nodeName.toLowerCase()}[${index}]`);
+    previousElement=previousElement.parentElement;
+   }
+   return {type: 'xpath', value: list.reverse().join('')};
   }
  }
  this.getElementByIdentifier=(identifier)=>
@@ -17,7 +31,7 @@ const replay=function()
     return document.getElementById(identifier.value);
    break;
    case 'xpath':
-    return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+    return document.evaluate(identifier.value, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
    break;
   }
  }
