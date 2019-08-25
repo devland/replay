@@ -1,0 +1,47 @@
+<html>
+ <head>
+  <script>
+let proxyUrl=new URL("http://127.0.0.1:8080/");
+let target, frame;
+let encode=(value)=>
+{
+ return encodeURIComponent(JSON.stringify({url: value}));
+}
+let loadTarget=(xhttp)=>
+{
+ frame.src=`${proxyUrl.href}${encode(target.value)}`;
+}
+window.addEventListener("load", (event)=>
+{
+ target=document.getElementById("targetHref");
+ frame=document.getElementById("frame");
+ frame.addEventListener("load", (event)=>
+ {
+  let framePath=frame.contentWindow.location.href.substring(proxyUrl.href.length);
+  for (let i=0; i<frame.contentDocument.links.length; i++)
+  {
+   let url=frame.contentDocument.links[i];
+   let newUrl=new URL(url.href);
+   let href=url.href;
+   if (href.includes(proxyUrl.href))
+   {
+    href=href.substring(proxyUrl.href.length);
+   }
+   if (href.includes(framePath))
+   {
+    href=href.substring(framePath.length);
+   }
+   url.href=proxyUrl.href+encode(href);
+  }
+ });
+});
+  </script>
+ </head>
+ <body>
+  <input type="text" id="targetHref" placeholder="website url" value="http://miscwalls.net">
+  <button type="button" onclick="loadTarget()">Change Content</button>
+  <div>
+   <iframe id="frame" style="width: 100vw; height: 90vh;"></iframe>
+  </div>
+ </body>
+</html>
