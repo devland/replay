@@ -2,12 +2,18 @@
  <head>
   <script>
 let proxyUrl=new URL("http://127.0.0.1:8080/");
-let target, frame;
+let target, frame, framePath;
 let encode=(value)=>
 {
  return encodeURIComponent(JSON.stringify({url: value}));
 }
-let loadTarget=(xhttp)=>
+const tunnel=(url)=>
+{
+ if (url.includes(proxyUrl.href)) url=url.substring(proxyUrl.href.length);
+ if (url.includes(framePath)) url=url.substring(framePath.length);
+ return proxyUrl.href+encode(url);
+}
+const loadTarget=(xhttp)=>
 {
  frame.src=`${proxyUrl.href}${encode(target.value)}`;
 }
@@ -17,21 +23,11 @@ window.addEventListener("load", (event)=>
  frame=document.getElementById("frame");
  frame.addEventListener("load", (event)=>
  {
-  let framePath=frame.contentWindow.location.href.substring(proxyUrl.href.length);
+  framePath=frame.contentWindow.location.href.substring(proxyUrl.href.length);
   for (let i=0; i<frame.contentDocument.links.length; i++)
   {
    let url=frame.contentDocument.links[i];
-   let newUrl=new URL(url.href);
-   let href=url.href;
-   if (href.includes(proxyUrl.href))
-   {
-    href=href.substring(proxyUrl.href.length);
-   }
-   if (href.includes(framePath))
-   {
-    href=href.substring(framePath.length);
-   }
-   url.href=proxyUrl.href+encode(href);
+   url.href=tunnel(url.href);
   }
  });
 });

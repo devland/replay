@@ -26,6 +26,10 @@ const log=function()
   }
   if (line) console.log(line);
 }
+const encode=(value)=>
+{
+ return encodeURIComponent(JSON.stringify({url: value}));
+}
 const decode=(value)=>
 {
  let output;
@@ -75,9 +79,9 @@ const proxy=(request, response)=>
    log(`redirecting to ${result.headers.location}`);
    const location=url.parse(result.headers.location);
    if (!location.host)
-    result.headers.location=proxyUrl.href+Buffer.from(url.resolve(rootTargetHref, result.headers.location)).toString("base64");
+    result.headers.location=proxyUrl.href+encode(url.resolve(rootTargetHref, result.headers.location));
    else
-    result.headers.location=proxyUrl.href+Buffer.from(result.headers.location).toString("base64");
+    result.headers.location=proxyUrl.href+encode(result.headers.location);
    response.writeHead(result.statusCode, result.headers);
    result.pipe(response);
   }
@@ -90,12 +94,9 @@ const proxy=(request, response)=>
   }
  });
  proxyRequest.on("error", (error)=>
-  {
-   log(error);
-   //response.write(500, error);
-   //response.end();
-  }
- );
+ {
+  log(error);
+ });
  return proxyRequest;
 }
 process.on("error", (error)=>
@@ -140,12 +141,10 @@ protocols["http:"].createServer((request, response)=>
  {
   if (error)
   {
-   //if (targetUrl && error.code=="ENOENT") request.pipe(proxy(request, response));
    if (error=="proxy") request.pipe(proxy(request, response));
    else
    {
     log("error", error);
-    //response.writeHead(500, {"Content-Type": "text/plain"});
     response.write(error + "\n");
     response.end();
    }
