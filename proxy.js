@@ -43,8 +43,8 @@ const decode=(value)=>
 }
 const proxy=(request, response)=>
 {
- let target=url.parse(request.url, true);
- const decoded=decode(target.pathname.substring(1));
+ const target=url.parse(request.url.substring(1), true);
+ const decoded=decode(target.pathname);
  let targetUrl='';
  if (decoded)
  {
@@ -53,6 +53,7 @@ const proxy=(request, response)=>
   else targetUrl=url.parse(url.resolve(rootTargetHref, decoded));
  }
  else targetUrl=url.parse(url.resolve(rootTargetHref, request.url));
+ if (target.search) targetUrl=url.parse(url.resolve(targetUrl.href, target.search));
  let targetUrlOptions=
  {
   host: targetUrl.host,
@@ -67,9 +68,8 @@ const proxy=(request, response)=>
   delete targetUrlOptions.headers.referer;
   delete targetUrlOptions.headers.host;
  }
- //log("request options", targetUrlOptions);
  if (!targetUrl) targetUrl={href: null};
- //log(`proxying request to "${targetUrl.href}"`);
+ log(`proxying request to "${targetUrl.href}"`);
  let responseTargetUrl=`${targetUrl.protocol}//${targetUrlOptions.host}${targetUrlOptions.path}`;
  const proxyRequest=protocols[targetUrl.protocol].request(targetUrlOptions, (result)=>
  {

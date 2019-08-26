@@ -29,6 +29,11 @@ window.addEventListener("load", (event)=>
    let url=frame.contentDocument.links[i];
    url.href=tunnel(url.href);
   }
+  for (let i=0; i<frame.contentDocument.forms.length; i++)
+  {
+   let form=frame.contentDocument.forms[i];
+   form.action=tunnel(form.getAttribute("action"));
+  }
  });
 });
   </script>
