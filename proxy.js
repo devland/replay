@@ -73,7 +73,11 @@ const proxy=(request, response)=>
  let responseTargetUrl=`${targetUrl.protocol}//${targetUrlOptions.host}${targetUrlOptions.path}`;
  const proxyRequest=protocols[targetUrl.protocol].request(targetUrlOptions, (result)=>
  {
-  //log(`response headers for "${responseTargetUrl}"`, result.headers);
+  delete result.headers["x-frame-options"];
+  if (Array.isArray(result.headers["set-cookie"]))
+   for (let i=0; i<result.headers["set-cookie"].length; i++)
+    result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/domain=(.*?)((; )|$)/, "");
+  log(`response headers for "${responseTargetUrl}"`, result.headers);
   if (result.headers.location)
   {
    log(`redirecting to ${result.headers.location}`);
@@ -88,7 +92,7 @@ const proxy=(request, response)=>
   else
   {
    result.headers["Access-Control-Allow-Origin"]="*";
-   //log(`proxy request response status code for "${responseTargetUrl}": ${result.statusCode}`);
+   log(`proxy request response status code for "${responseTargetUrl}": ${result.statusCode}`);
    response.writeHead(result.statusCode, result.headers);
    result.pipe(response);
   }
