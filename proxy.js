@@ -76,7 +76,10 @@ const proxy=(request, response)=>
   delete result.headers["x-frame-options"];
   if (Array.isArray(result.headers["set-cookie"]))
    for (let i=0; i<result.headers["set-cookie"].length; i++)
+   {
     result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/domain=(.*?)((; )|$)/, "");
+    result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/ secure((; )|$)/, "");
+   }
   log(`response headers for "${responseTargetUrl}"`, result.headers);
   if (result.headers.location)
   {

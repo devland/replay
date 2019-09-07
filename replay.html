@@ -9,6 +9,7 @@ let encode=(value)=>
 }
 const tunnel=(url)=>
 {
+ if (!url) return "";
  if (url.includes(proxyUrl.href)) url=url.substring(proxyUrl.href.length);
  if (url.includes(framePath)) url=url.substring(framePath.length);
  return proxyUrl.href+encode(url);
