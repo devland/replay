@@ -76,6 +76,8 @@ const proxy=(request, response)=>
  proxyRequest.on("error", (error)=>
  {
   log(error);
+  response.writeHead(500);
+  response.end();
  });
  return proxyRequest;
 }
