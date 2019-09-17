@@ -3,20 +3,25 @@
   <script>
 let proxyUrl=new URL("http://127.0.0.1:8080/");
 let target, frame, framePath;
-let encode=(value)=>
-{
- return encodeURIComponent(JSON.stringify({url: value}));
-}
 const tunnel=(url)=>
 {
  if (!url) return "";
  if (url.includes(proxyUrl.href)) url=url.substring(proxyUrl.href.length);
- if (url.includes(framePath)) url=url.substring(framePath.length);
- return proxyUrl.href+encode(url);
+ let targetUrl;
+ try
+ {
+  targetUrl=new URL(url);
+ }
+ catch(error)
+ {
+  targetUrl=new URL(url, framePath.origin);
+ }
+ url=targetUrl.href;
+ return proxyUrl.href+url;
 }
 const loadTarget=(xhttp)=>
 {
- frame.src=`${proxyUrl.href}${encode(target.value)}`;
+ frame.src=`${proxyUrl.href}${target.value}/`;
 }
 window.addEventListener("load", (event)=>
 {
@@ -24,23 +29,24 @@ window.addEventListener("load", (event)=>
  frame=document.getElementById("frame");
  frame.addEventListener("load", (event)=>
  {
-  framePath=frame.contentWindow.location.href.substring(proxyUrl.href.length);
-  for (let i=0; i<frame.contentDocument.links.length; i++)
+  framePath=new URL(frame.contentWindow.location.href.substring(proxyUrl.href.length));
+  frame.contentDocument.addEventListener("click", (event)=>
   {
-   let url=frame.contentDocument.links[i];
-   url.href=tunnel(url.href);
-  }
-  for (let i=0; i<frame.contentDocument.forms.length; i++)
-  {
-   let form=frame.contentDocument.forms[i];
-   form.action=tunnel(form.getAttribute("action"));
-  }
+   let link=event.target.closest("a");
+   let form=event.target.closest("form");
+   if (link && link.href)
+   {
+    link.href=tunnel(link.href);
+    link.target="_self";
+   }
+   if (form) form.action=tunnel(form.getAttribute("action"));
+  });
  });
 });
   </script>
  </head>
  <body>
-  <input type="text" id="targetHref" placeholder="website url" value="http://miscwalls.net">
+  <input type="text" id="targetHref" placeholder="website url" value="http://devana.eu">
   <button type="button" onclick="loadTarget()">Change Content</button>
   <div>
    <iframe id="frame" style="width: 100vw; height: 90vh;"></iframe>

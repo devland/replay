@@ -6,17 +6,16 @@ const protocols=
  port=process.argv[2] || 8080,
  url=require("url"),
  util=require("util"),
+ stream=require("stream"),
  fs=require("fs"),
  extra=require("./extra.js");
- let rootTargetHref="http://example.com";
  let targetUrl=new URL("http://example.com");
  let proxyUrl=new URL("http://127.0.0.1:8080/");
  let staticFiles=["replay.html", "replay.js"];
 const log=function()
 {
- var now=new Date(),
-     line="["+now+" ."+now.getMilliseconds()+"]: ";
- for (var i in arguments)
+ var now=new Date(), line="["+now+" ."+now.getMilliseconds()+"]: ";
+ for (let i in arguments)
   if (typeof arguments[i] == "string") line+=arguments[i];
   else
   {
@@ -26,34 +25,9 @@ const log=function()
   }
   if (line) console.log(line);
 }
-const encode=(value)=>
-{
- return encodeURIComponent(JSON.stringify({url: value}));
-}
-const decode=(value)=>
-{
- let output;
- try
- {
-  output=decodeURIComponent(value);
-  output=JSON.parse(output);
-  return output.url?output.url:null;
- }
- catch(error){return null;}
-}
 const proxy=(request, response)=>
 {
- const target=url.parse(request.url.substring(1), true);
- const decoded=decode(target.pathname);
- let targetUrl='';
- if (decoded)
- {
-  targetUrl=url.parse(decoded, true);
-  if (targetUrl.host) rootTargetHref=targetUrl.href;
-  else targetUrl=url.parse(url.resolve(rootTargetHref, decoded));
- }
- else targetUrl=url.parse(url.resolve(rootTargetHref, request.url));
- if (target.search) targetUrl=url.parse(url.resolve(targetUrl.href, target.search));
+ const targetUrl=url.parse(request.url.substring(1), true);
  let targetUrlOptions=
  {
   host: targetUrl.host,
@@ -86,9 +60,9 @@ const proxy=(request, response)=>
    log(`redirecting to ${result.headers.location}`);
    const location=url.parse(result.headers.location);
    if (!location.host)
-    result.headers.location=proxyUrl.href+encode(url.resolve(rootTargetHref, result.headers.location));
+    result.headers.location=proxyUrl.href+url.resolve(responseTargetUrl, result.headers.location);
    else
-    result.headers.location=proxyUrl.href+encode(result.headers.location);
+    result.headers.location=proxyUrl.href+result.headers.location;
    response.writeHead(result.statusCode, result.headers);
    result.pipe(response);
   }
@@ -148,7 +122,12 @@ protocols["http:"].createServer((request, response)=>
  {
   if (error)
   {
-   if (error=="proxy") request.pipe(proxy(request, response));
+   if (error=="proxy")
+   {
+    const targetUrl=url.parse(request.url.substring(1), true);
+    if (!targetUrl.protocol) response.end();
+    else request.pipe(proxy(request, response));
+   }
    else
    {
     log("error", error);
