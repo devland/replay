@@ -6,7 +6,6 @@ const protocols=
  port=process.argv[2] || 8080,
  url=require("url"),
  util=require("util"),
- stream=require("stream"),
  fs=require("fs"),
  extra=require("./extra.js");
  let targetUrl=new URL("http://example.com");
