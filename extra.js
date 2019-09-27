@@ -35,5 +35,24 @@ function extra()
   }
   run();
  }
+ this.cookies={
+  parse: (input)=>
+  {
+   let list=input.split(';');
+   let output={};
+   for (item of list)
+   {
+    matches=item.match(/ ?(.*?)=(.*?)(;|$)/);
+    if (matches && matches.length>=4) output[matches[1]]=matches[2];
+   }
+   return output;
+  },
+  stringify: (cookies)=>
+  {
+   let list=[];
+   for (key in cookies) list.push(`${key}=${cookies[key]}`);
+   return list.join(';');
+  }
+ }
 }
 if (typeof module!="undefined" && module.exports) module.exports=new extra();

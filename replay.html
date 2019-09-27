@@ -1,8 +1,11 @@
 <html>
  <head>
-  <script>
+  <script type="text/javascript" src="extra.js"></script>
+  <script type="text/javascript">
+let xtra;
 let proxyUrl=new URL("http://127.0.0.1:8080/");
 let target, frame, framePath;
+let cookies={};
 const tunnel=(url)=>
 {
  if (!url) return "";
@@ -21,10 +24,12 @@ const tunnel=(url)=>
 }
 const loadTarget=(xhttp)=>
 {
+ document.cookie=`proxyTargetHref=${target.value}; path=/`;
  frame.src=`${proxyUrl.href}${target.value}/`;
 }
 window.addEventListener("load", (event)=>
 {
+ xtra=new extra();
  target=document.getElementById("targetHref");
  frame=document.getElementById("frame");
  frame.addEventListener("load", (event)=>

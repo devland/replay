@@ -9,8 +9,9 @@ const protocols=
  fs=require("fs"),
  extra=require("./extra.js");
  let targetUrl=new URL("http://example.com");
- let proxyUrl=new URL("http://127.0.0.1:8080/");
- let staticFiles=["replay.html", "replay.js"];
+ let proxyUrl=new URL(`http://127.0.0.1:${port}/`);
+ let staticFiles=["replay.html", "replay.js", "extra.js"];
+ let proxyTarget={};
 const log=function()
 {
  var now=new Date(), line="["+now+" ."+now.getMilliseconds()+"]: ";
@@ -26,7 +27,16 @@ const log=function()
 }
 const proxy=(request, response)=>
 {
- const targetUrl=url.parse(request.url.substring(1), true);
+ let cookies=extra.cookies.parse(request.headers.cookie);
+ if (cookies.proxyTargetHref) proxyTarget=url.parse(cookies.proxyTargetHref);
+ let targetUrl=url.parse(request.url.substring(1), true);
+ if (proxyTarget.host!=targetUrl.host)
+  targetUrl=url.parse(`${proxyTarget.protocol}//${proxyTarget.host}/${targetUrl.href.replace(/https?:\/\//, "")}`);
+ if (cookies.proxyTargetHref)
+ {
+  delete cookies.proxyTargetHref;
+  request.headers.cookie=extra.cookies.stringify(cookies);
+ }
  let targetUrlOptions=
  {
   host: targetUrl.host,
@@ -43,50 +53,68 @@ const proxy=(request, response)=>
  }
  if (!targetUrl) targetUrl={href: null};
  log(`proxying request to "${targetUrl.href}"`);
- let responseTargetUrl=`${targetUrl.protocol}//${targetUrlOptions.host}${targetUrlOptions.path}`;
- const proxyRequest=protocols[targetUrl.protocol].request(targetUrlOptions, (result)=>
+ if (protocols[targetUrl.protocol])
  {
-  delete result.headers["x-frame-options"];
-  if (Array.isArray(result.headers["set-cookie"]))
-   for (let i=0; i<result.headers["set-cookie"].length; i++)
+  const proxyRequest=protocols[targetUrl.protocol].request(targetUrlOptions, (result)=>
+  {
+   delete result.headers["x-frame-options"];
+   if (Array.isArray(result.headers["set-cookie"]))
+    for (let i=0; i<result.headers["set-cookie"].length; i++)
+    {
+     result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/domain=(.*?)((; )|$)/, "");
+     result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/ secure((; )|$)/, "");
+    }
+   log(`response headers for "${targetUrl.href}"`, result.headers);
+   if (result.headers.location)
    {
-    result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/domain=(.*?)((; )|$)/, "");
-    result.headers["set-cookie"][i]=result.headers["set-cookie"][i].replace(/ secure((; )|$)/, "");
+    log(`redirecting to ${result.headers.location}`);
+    const location=url.parse(result.headers.location);
+    if (!location.host)
+    {
+     let newLocation=url.resolve(targetUrl.href, result.headers.location);
+     result.headers.location=proxyUrl.href+newLocation;
+     proxyTarget=url.parse(newLocation);
+    }
+    else
+    {
+     proxyTarget=url.parse(result.headers.location);
+     result.headers.location=proxyUrl.href+result.headers.location;
+    }
+    if (!Array.isArray(result.headers["set-cookie"])) result.headers["set-cookie"]=[];
+    result.headers["set-cookie"].push(`proxyTargetHref=${proxyTarget.href}; path=/`);
+    response.writeHead(result.statusCode, result.headers);
+    result.pipe(response);
    }
-  log(`response headers for "${responseTargetUrl}"`, result.headers);
-  if (result.headers.location)
-  {
-   log(`redirecting to ${result.headers.location}`);
-   const location=url.parse(result.headers.location);
-   if (!location.host)
-    result.headers.location=proxyUrl.href+url.resolve(responseTargetUrl, result.headers.location);
    else
-    result.headers.location=proxyUrl.href+result.headers.location;
-   response.writeHead(result.statusCode, result.headers);
-   result.pipe(response);
-  }
-  else
+   {
+    result.headers["Access-Control-Allow-Origin"]="*";
+    log(`proxy request response status code for "${targetUrl.href}": ${result.statusCode}`);
+    response.writeHead(result.statusCode, result.headers);
+    result.pipe(response);
+   }
+  });
+  proxyRequest.on("error", (error)=>
   {
-   result.headers["Access-Control-Allow-Origin"]="*";
-   log(`proxy request response status code for "${responseTargetUrl}": ${result.statusCode}`);
-   response.writeHead(result.statusCode, result.headers);
-   result.pipe(response);
-  }
- });
- proxyRequest.on("error", (error)=>
+   log(`error for ${targetUrl.href}`, error);
+   response.writeHead(500);
+   response.end();
+  });
+  return proxyRequest;
+ }
+ else
  {
-  log(error);
   response.writeHead(500);
   response.end();
- });
- return proxyRequest;
+  return null;
+ }
 }
 process.on("error", (error)=>
 {
  log(`[error] process error`, error);
 });
-protocols["http:"].createServer((request, response)=>
+const requestHandler=(request, response)=>
 {
+ log("request headers:", request.headers);
  let path=request.url;
  request.on("error", (error)=>
  {
@@ -127,7 +155,11 @@ protocols["http:"].createServer((request, response)=>
    {
     const targetUrl=url.parse(request.url.substring(1), true);
     if (!targetUrl.protocol) response.end();
-    else request.pipe(proxy(request, response));
+    else 
+    {
+     let stream=proxy(request, response);
+     if (stream) request.pipe(stream);
+    }
    }
    else
    {
@@ -143,5 +175,6 @@ protocols["http:"].createServer((request, response)=>
    response.end();
   }
  });
-}).listen(parseInt(port, 10));
+}
+protocols["http:"].createServer(requestHandler).listen(parseInt(port, 10));
 log("static file server running at http://localhost:"+port);
