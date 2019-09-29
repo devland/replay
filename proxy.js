@@ -95,7 +95,7 @@ const proxy=(request, response)=>
   });
   proxyRequest.on("error", (error)=>
   {
-   log(`error for ${targetUrl.href}`, error);
+   log(`proxy request error for ${targetUrl.href}`, error);
    response.writeHead(500);
    response.end();
   });
@@ -103,6 +103,7 @@ const proxy=(request, response)=>
  }
  else
  {
+  log(`no protocol for ${targetUrl.href}`);
   response.writeHead(500);
   response.end();
   return null;
@@ -154,11 +155,13 @@ const requestHandler=(request, response)=>
    if (error=="proxy")
    {
     const targetUrl=url.parse(request.url.substring(1), true);
-    if (!targetUrl.protocol) response.end();
-    else 
+    let stream=proxy(request, response);
+    if (stream) request.pipe(stream);
+    else
     {
-     let stream=proxy(request, response);
-     if (stream) request.pipe(stream);
+     log(`no stream for ${targetUrl.href}`);
+     response.writeHead(500);
+     response.end();
     }
    }
    else
