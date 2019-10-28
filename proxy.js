@@ -45,7 +45,7 @@ const proxy=(request, response)=>
  let cookies=extra.cookies.parse(request.headers.cookie);
  if (cookies.proxyTargetHref) proxyTarget=url.parse(cookies.proxyTargetHref);
  let targetUrl=url.parse(request.url.substring(1), true);
- if (proxyTarget.host!=targetUrl.host)
+ if (!targetUrl.host)
   targetUrl=url.parse(`${proxyTarget.protocol}//${proxyTarget.host}/${targetUrl.href.replace(/https?:\/\//, "")}`);
  if (cookies.proxyTargetHref)
  {
