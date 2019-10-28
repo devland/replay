@@ -19,8 +19,7 @@ const tunnel=(url)=>
  {
   targetUrl=new URL(url, framePath.origin);
  }
- url=targetUrl.href;
- return proxyUrl.href+url;
+ return proxyUrl.href+targetUrl.href;
 }
 const loadTarget=(url)=>
 {
