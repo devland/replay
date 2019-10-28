@@ -22,28 +22,39 @@ const tunnel=(url)=>
  url=targetUrl.href;
  return proxyUrl.href+url;
 }
-const loadTarget=(xhttp)=>
+const loadTarget=(url)=>
 {
+ if (url)
+ {
+  url=tunnel(url);
+  let destination=url.includes(proxyUrl.href)?url.substring(proxyUrl.href.length):url;
+  target.value=destination;
+ }
+ else url=tunnel(target.value);
  document.cookie=`proxyTargetHref=${target.value}; path=/`;
- frame.src=`${proxyUrl.href}${target.value}/`;
+ frame.src=url;
 }
 window.addEventListener("load", (event)=>
 {
- xtra=new extra();
  target=document.getElementById("targetHref");
  frame=document.getElementById("frame");
  frame.addEventListener("load", (event)=>
  {
+  if (!frame.contentDocument) return null;
+  console.log(`loaded ${frame.contentDocument.location.href}`);
   framePath=new URL(frame.contentWindow.location.href.substring(proxyUrl.href.length));
   frame.contentDocument.addEventListener("click", (event)=>
   {
+   console.log("click");
    let link=event.target.closest("a");
    let form=event.target.closest("form");
    if (link && link.href)
    {
-    link.href=tunnel(link.href);
-    link.target="_self";
+    console.log(link.href);
+    loadTarget(link.href);
+    event.preventDefault();
    }
+   else console.log("no link...");
    if (form) form.action=tunnel(form.getAttribute("action"));
   });
  });
@@ -51,7 +62,7 @@ window.addEventListener("load", (event)=>
   </script>
  </head>
  <body>
-  <input type="text" id="targetHref" placeholder="website url" value="http://devana.eu">
+  <input type="text" id="targetHref" placeholder="website url" value="https://developer.mozilla.org/en-US/docs/Web/API/WindowEventHandlers/onunload">
   <button type="button" onclick="loadTarget()">Change Content</button>
   <div>
    <iframe id="frame" style="width: 100vw; height: 90vh;"></iframe>
