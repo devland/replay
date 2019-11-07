@@ -142,7 +142,14 @@ const proxy=(request, response)=>
    response.writeHead(500);
    response.end();
   });
-  proxyRequest.end();
+  request.on("data", (chunk)=>
+  {
+   proxyRequest.write(chunk);
+  });
+  request.on("end", ()=>
+  {
+   proxyRequest.end();
+  });
  }
  else
  {
